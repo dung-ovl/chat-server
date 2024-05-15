@@ -1,0 +1,27 @@
+{
+  "name": "chat-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.4",
+    "morgan": "^1.10.0",
+    "otp-generator": "^4.0.1",
+    "xss": "^1.0.15"
+  }
+}
