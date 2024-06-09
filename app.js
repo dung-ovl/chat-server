@@ -1,104 +1,75 @@
-const express = require("express"); // web framework for Node.js.
-const morgan = require("morgan"); // HTTP request logger middleware for node.js
+import express from "express";
+import dotenv from "dotenv";
 
-const routes = require("./routes/index");
+// security packages
+import cors from "cors";
+import helmet from "helmet";
+import { xss } from "express-xss-sanitizer";
+import mongoSanitize from "express-mongo-sanitize";
+import cookieParser from "cookie-parser";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
+import createHttpError from "http-errors"; // error handler
 
-const rateLimit = require("express-rate-limit"); // Basic rate-limiting middleware for Express. Use to limit repeated requests to public APIs and/or endpoints such as password reset.
-const helmet = require("helmet"); // Helmet helps you secure your Express apps by setting various HTTP headers. It's not a silver bullet, but it can help!
+// folder/file imports
+import router from "./src/routes/index.js";
 
-// These headers are set in response by helmet
+// dotenv config
+dotenv.config();
 
-// Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
-// Cross-Origin-Embedder-Policy: require-corp
-// Cross-Origin-Opener-Policy: same-origin
-// Cross-Origin-Resource-Policy: same-origin
-// Origin-Agent-Cluster: ?1
-// Referrer-Policy: no-referrer
-// Strict-Transport-Security: max-age=15552000; includeSubDomains
-// X-Content-Type-Options: nosniff
-// X-DNS-Prefetch-Control: off
-// X-Download-Options: noopen
-// X-Frame-Options: SAMEORIGIN
-// X-Permitted-Cross-Domain-Policies: none
-// X-XSS-Protection: 0
-
-const mongosanitize = require("express-mongo-sanitize"); // This module searches for any keys in objects that begin with a $ sign or contain a ., from req.body, req.query or req.params.
-
-// By default, $ and . characters are removed completely from user-supplied input in the following places:
-// - req.body
-// - req.params
-// - req.headers
-// - req.query
-
-const xss = require("xss-clean"); // Node.js Connect middleware to sanitize user input coming from POST body, GET queries, and url params.
-
-const bodyParser = require("body-parser"); // Node.js body parsing middleware.
-
-// Parses incoming request bodies in a middleware before your handlers, available under the req.body property.
-
-const cors = require("cors"); // CORS is a node.js package for providing a Connect/Express middleware that can be used to enable CORS with various options.
-const cookieParser = require("cookie-parser"); // Parse Cookie header and populate req.cookies with an object keyed by the cookie names.
-const session = require("cookie-session"); // Simple cookie-based session middleware.
-
-
-
+// creating express app
 const app = express();
 
-app.use(
-  cors({
-    origin: "*",
+// Enable trust proxy
+app.set("trust proxy", 1);
+const corsOptions = {
+  origin: "http://localhost:3000",
+  credentials: true, //access-control-allow-credentials:true
+  optionSuccessStatus: 200,
+};
+// cors setup
+app.use(cors(corsOptions));
 
-    methods: ["GET", "PATCH", "POST", "DELETE", "PUT"],
+// parsing data to json
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-    credentials: true, //
-
-    //   Access-Control-Allow-Credentials is a header that, when set to true , tells browsers to expose the response to the frontend JavaScript code. The credentials consist of cookies, authorization headers, and TLS client certificates.
-  })
-);
-
-app.use(cookieParser());
-
-// Setup express response and body parser configurations
-app.use(express.json({ limit: "10kb" })); // Controls the maximum request body size. If this is a number, then the value specifies the number of bytes; if it is a string, the value is passed to the bytes library for parsing. Defaults to '100kb'.
-app.use(bodyParser.json()); // Returns middleware that only parses json
-app.use(bodyParser.urlencoded({ extended: true })); // Returns middleware that only parses urlencoded bodies
-
-app.use(
-  session({
-    secret: "keyboard cat",
-    proxy: true,
-    resave: true,
-    saveUnintialized: true,
-    cookie: {
-      secure: false,
-    },
-  })
-);
-
-app.use(helmet());
-
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-}
-
+// security middlewares
 const limiter = rateLimit({
   max: 3000,
-  windowMs: 60 * 60 * 1000, // In one hour
-  message: "Too many Requests from this IP, please try again in an hour!",
+  windowMs: 60 * 60 * 1000, // in 1 hour
+  message: "Too many requests was made, please try again after 1 hour",
+});
+app.use("/", limiter); // limits rates of requests
+app.use(helmet()); // general security
+app.use(xss()); // xss protection
+app.use(mongoSanitize()); // sanitization for mongodb
+app.use(cookieParser()); // parsing cookies
+app.use(compression()); // gzip compression
+
+// Index Route
+app.get("/", (req, res) => {
+  res.send("Welcome to TwinkConnect Backend😺");
 });
 
-app.use("/tawk", limiter);
+// using api routes
+app.use("/api", router);
 
-app.use(
-  express.urlencoded({
-    extended: true,
-  })
-); // Returns middleware that only parses urlencoded bodies
+// -------http error handling-------
+app.use(async (req, res, next) => {
+  next(createHttpError.NotFound("This route does not exist!"));
+});
 
-app.use(mongosanitize());
+// error handling
+app.use(async (err, req, res, next) => {
+  res.status(err.status || 500);
+  res.send({
+    error: {
+      status: "error",
+      message: err.message,
+    },
+  });
+});
+// ---------------------------------
 
-app.use(xss());
-
-app.use(routes);
-
-module.exports = app;
+export default app;
