@@ -23,7 +23,7 @@ const app = express();
 // Enable trust proxy
 app.set("trust proxy", 1);
 const corsOptions = {
-  origin: "http://localhost:3000",
+  origin: process.env.FRONT_URL,
   credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus: 200,
 };
