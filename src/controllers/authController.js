@@ -11,7 +11,6 @@ import { formatRemainingTime, transporter } from "../services/mailer.js";
 import { generateToken, verifyToken } from "../services/tokenService.js";
 import reset from "../Templates/Mail/reset.js";
 import { generateLoginTokens } from "../services/authService.js";
-import { verifyreCAPTCHA } from "../services/authService.js";
 
 // -------------------------- Login auth --------------------------
 export const login = async (req, res, next) => {
@@ -273,17 +272,11 @@ export const verifyOTP = async (req, res, next) => {
 // -------------------------- Forgot Password --------------------------
 export const forgotPassword = async (req, res, next) => {
   try {
-    const { email, recaptchaToken } = req.body;
+    const { email } = req.body;
 
     // check for empty fields
     if (!email) {
       throw createHttpError.BadRequest("Required field: email");
-    }
-
-    const reCAPTCHA = await verifyreCAPTCHA(recaptchaToken);
-
-    if (!reCAPTCHA.success) {
-      throw createHttpError.BadRequest("reCAPTCHA failed, please try again");
     }
 
     const user = await UserModel.findOne({ email: email });
